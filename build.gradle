@@ -1,0 +1,21 @@
+group 'com.github.natanbc'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    //HTTP
+    compile 'com.squareup.okhttp3:okhttp:3.9.0'
+
+    //JSON parser
+    compile 'org.json:json:20170516'
+
+    //Code safety
+    compile 'com.google.code.findbugs:jsr305:3.0.2'
+}
