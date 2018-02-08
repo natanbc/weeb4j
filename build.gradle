@@ -7,7 +7,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
-def versionObj = new Version(major: 1, minor: 0, revision: 0)
+def versionObj = new Version(major: 1, minor: 1, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
@@ -17,12 +17,12 @@ targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    jcenter()
+    maven { url 'https://dl.bintray.com/natanbc/maven' }
 }
 
 dependencies {
     //HTTP
-    compile 'com.squareup.okhttp3:okhttp:3.9.0'
+    compile 'com.github.natanbc:reliqua:1.0'
 
     //JSON parser
     compile 'org.json:json:20170516'

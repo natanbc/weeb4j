@@ -1,6 +1,6 @@
 package com.github.natanbc.weeb4j.image;
 
-import com.github.natanbc.weeb4j.PendingRequest;
+import com.github.natanbc.reliqua.request.PendingRequest;
 import com.github.natanbc.weeb4j.Weeb4J;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
@@ -171,7 +171,7 @@ public class Image {
     @Nonnull
     @CheckReturnValue
     public PendingRequest<byte[]> download() {
-        return new PendingRequest<byte[]>(api, new Request.Builder().get().url(url)) {
+        return new PendingRequest<byte[]>(api, new Request.Builder().get().url(url), url) {
             @Nullable
             @Override
             protected byte[] mapData(@Nonnull ResponseBody response) throws IOException {
