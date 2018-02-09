@@ -6,7 +6,7 @@ Java wrapper for the weeb.sh API
 ## Usage
 
 ```java
-Weeb4J api = new Weeb4J.Builder().setToken("my_token").build();
+Weeb4J api = new Weeb4J.Builder().setToken(TokenType.WOLKE /* or BEARER */, "my_token").build();
 
 api.getImageTypes().async(types->{
   api.getRandomImage(types.get(0), null, HiddenMode.DEFAULT, NsfwFilter.NO_NSFW, FileType.PNG).async(image->{
