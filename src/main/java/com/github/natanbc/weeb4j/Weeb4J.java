@@ -22,11 +22,19 @@ import java.util.List;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Weeb4J extends Reliqua {
+    public static final String VERSION_MAJOR = "@VERSION_MAJOR@";
+    public static final String VERSION_MINOR = "@VERSION_MINOR@";
+    public static final String VERSION_REVISION = "@VERSION_REVISION@";
+    @SuppressWarnings("ConstantConditions")
+    public static final String VERSION = VERSION_MAJOR.startsWith("@") ? "dev" : String.format("%s.%s.%s", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+
+    private final String apiBase;
     private final String token;
     private final String userAgent;
 
-    Weeb4J(RateLimiter limiter, OkHttpClient client, String token, String userAgent, boolean trackCallSites) {
+    Weeb4J(RateLimiter limiter, OkHttpClient client, boolean trackCallSites, Environment environment, String token, String userAgent) {
         super(limiter, client, trackCallSites);
+        this.apiBase = environment.getApiBase();
         this.token = token;
         this.userAgent = userAgent;
     }
@@ -35,7 +43,7 @@ public class Weeb4J extends Reliqua {
     @Nonnull
     public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden) {
         QueryStringBuilder qsb = new QueryStringBuilder()
-                .append("https://api.weeb.sh/images/tags");
+                .append(apiBase + "/images/tags");
         if(hidden != null) {
             hidden.appendTo(qsb);
         }
@@ -63,7 +71,7 @@ public class Weeb4J extends Reliqua {
     @Nonnull
     public PendingRequest<List<String>> getImageTypes(@Nullable HiddenMode hidden) {
         QueryStringBuilder qsb = new QueryStringBuilder()
-                .append("https://api.weeb.sh/images/types");
+                .append(apiBase + "/images/types");
         if(hidden != null) {
             hidden.appendTo(qsb);
         }
@@ -95,7 +103,7 @@ public class Weeb4J extends Reliqua {
         }
 
         QueryStringBuilder qsb = new QueryStringBuilder()
-                .append("https://api.weeb.sh/images/random");
+                .append(apiBase + "/images/random");
         if(type != null) {
             qsb.append("type", type);
         }
@@ -139,6 +147,7 @@ public class Weeb4J extends Reliqua {
         private String token;
         private String userAgent;
         private boolean trackCallSites;
+        private Environment environment;
 
         @CheckReturnValue
         @Nonnull
@@ -177,14 +186,22 @@ public class Weeb4J extends Reliqua {
 
         @CheckReturnValue
         @Nonnull
+        public Builder setEnvironment(@Nullable Environment environment) {
+            this.environment = environment;
+            return this;
+        }
+
+        @CheckReturnValue
+        @Nonnull
         public Weeb4J build() {
             if(token == null) throw new IllegalStateException("Token not set");
             return new Weeb4J(
                     limiter,
                     client == null ? new OkHttpClient() : client,
+                    trackCallSites,
+                    environment == null ? Environment.PRODUCTION : environment,
                     token,
-                    userAgent == null ? "Weeb4J (Anonymous user)" : userAgent,
-                    trackCallSites
+                    userAgent == null ? "Weeb4J/" + VERSION + "/" + (environment == null ? "production" : environment.name().toLowerCase()) : userAgent
             );
         }
     }
