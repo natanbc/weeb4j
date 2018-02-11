@@ -92,10 +92,11 @@ public final class PreviewImage {
     @Nonnull
     @CheckReturnValue
     public PendingRequest<byte[]> download() {
-        return new PendingRequest<byte[]>(api, new Request.Builder().get().url(url), url) {
+        return new PendingRequest<byte[]>(api, new Request.Builder().get().url(url), url, 200) {
             @Nullable
             @Override
-            protected byte[] mapData(@Nonnull ResponseBody response) throws IOException {
+            protected byte[] mapData(@Nullable ResponseBody response) throws IOException {
+                if(response == null) throw new RuntimeException("Response should never be null");
                 return response.bytes();
             }
         };
