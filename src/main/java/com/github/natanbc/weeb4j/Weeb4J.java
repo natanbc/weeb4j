@@ -52,7 +52,7 @@ public class Weeb4J extends Reliqua {
             if(json.getInt("status") == 403) {
                 throw new MissingScopeException(json.getString("message"));
             }
-            JSONArray types = json.getJSONArray("types");
+            JSONArray types = json.getJSONArray("tags");
             List<String> list = new ArrayList<>(types.length());
             for(int i = 0, j = types.length(); i < j; i++) {
                 list.add(types.getString(i));
