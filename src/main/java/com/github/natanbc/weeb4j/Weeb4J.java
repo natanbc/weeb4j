@@ -3,19 +3,27 @@ package com.github.natanbc.weeb4j;
 import com.github.natanbc.reliqua.Reliqua;
 import com.github.natanbc.reliqua.limiter.RateLimiter;
 import com.github.natanbc.reliqua.request.PendingRequest;
+import com.github.natanbc.reliqua.request.RequestContext;
+import com.github.natanbc.reliqua.request.RequestException;
 import com.github.natanbc.weeb4j.image.FileType;
 import com.github.natanbc.weeb4j.image.HiddenMode;
 import com.github.natanbc.weeb4j.image.Image;
 import com.github.natanbc.weeb4j.image.NsfwFilter;
+import com.github.natanbc.weeb4j.image.PreviewImage;
+import com.github.natanbc.weeb4j.image.PreviewMode;
 import com.github.natanbc.weeb4j.util.QueryStringBuilder;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,62 +47,207 @@ public class Weeb4J extends Reliqua {
         this.userAgent = userAgent;
     }
 
+    /**
+     * Retrieve tags matching the given filters.
+     *
+     * @param hidden Filter for hidden tags.
+     * @param nsfw Filter for NSFW (not safe for work) tags.
+     *
+     * @return List of tags matching the specified filters.
+     */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden) {
+    public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw) {
         QueryStringBuilder qsb = new QueryStringBuilder()
                 .append(apiBase + "/images/tags");
         if(hidden != null) {
             hidden.appendTo(qsb);
         }
-        return createRequest("/images/tags", createRequest(qsb.build()), response->{
+        if(nsfw != null) {
+            nsfw.appendTo(qsb);
+        }
+        return createRequest("/images/tags", createRequest(qsb.build()), 200, response->{
+            if(response == null) throw new RuntimeException("Response should never be null");
             JSONObject json = new JSONObject(response.string());
-            if(json.getInt("status") == 403) {
-                throw new MissingScopeException(json.getString("message"));
-            }
             JSONArray types = json.getJSONArray("tags");
             List<String> list = new ArrayList<>(types.length());
             for(int i = 0, j = types.length(); i < j; i++) {
                 list.add(types.getString(i));
             }
             return Collections.unmodifiableList(list);
-        });
+        }, Weeb4J::handleError);
     }
 
+    /**
+     * Retrieve tags matching the given filters.
+     *
+     * @param hidden Filter for hidden tags.
+     *
+     * @return List of tags matching the specified filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden) {
+        return getImageTags(hidden, null);
+    }
+
+    /**
+     * Retrieve tags matching the given filters.
+     *
+     * @param nsfw Filter for NSFW (not safe for work) tags.
+     *
+     * @return List of tags matching the specified filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<List<String>> getImageTags(@Nullable NsfwFilter nsfw) {
+        return getImageTags(null, nsfw);
+    }
+
+    /**
+     * Retrieve tags from the API.
+     *
+     * @return List of tags available.
+     */
     @CheckReturnValue
     @Nonnull
     public PendingRequest<List<String>> getImageTags() {
-        return getImageTags(null);
+        return getImageTags(null, null);
     }
 
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param hidden Filter for hidden types.
+     * @param nsfw Filter for NSFW (not safe for work) types.
+     * @param preview Whether or not previews should be included.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTypes(@Nullable HiddenMode hidden) {
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable PreviewMode preview) {
         QueryStringBuilder qsb = new QueryStringBuilder()
                 .append(apiBase + "/images/types");
         if(hidden != null) {
             hidden.appendTo(qsb);
         }
-        return createRequest("/images/types", createRequest(qsb.build()), response->{
+        if(nsfw != null) {
+            nsfw.appendTo(qsb);
+        }
+        if(preview != null) {
+            preview.appendTo(qsb);
+        }
+        return createRequest("/images/types", createRequest(qsb.build()), 200, response->{
+            if(response == null) throw new RuntimeException("Response should never be null");
             JSONObject json = new JSONObject(response.string());
-            if(json.getInt("status") == 403) {
-                throw new MissingScopeException(json.getString("message"));
-            }
-            JSONArray types = json.getJSONArray("types");
-            List<String> list = new ArrayList<>(types.length());
-            for(int i = 0, j = types.length(); i < j; i++) {
-                list.add(types.getString(i));
-            }
-            return Collections.unmodifiableList(list);
-        });
+            return PreviewImage.fromJSON(Weeb4J.this, json);
+        }, Weeb4J::handleError);
     }
 
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param hidden Filter for hidden types.
+     * @param nsfw Filter for NSFW (not safe for work) types.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTypes() {
-        return getImageTypes(null);
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, NsfwFilter nsfw) {
+        return getImageTypes(hidden, nsfw, null);
     }
 
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param hidden Filter for hidden types.
+     * @param preview Whether or not previews should be included.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, PreviewMode preview) {
+        return getImageTypes(hidden, null, preview);
+    }
+
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param nsfw Filter for NSFW (not safe for work) types.
+     * @param preview Whether or not previews should be included.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable NsfwFilter nsfw, PreviewMode preview) {
+        return getImageTypes(null, nsfw, preview);
+    }
+
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param hidden Filter for hidden types.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden) {
+        return getImageTypes(hidden, null, null);
+    }
+
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param nsfw Filter for NSFW (not safe for work) types.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable NsfwFilter nsfw) {
+        return getImageTypes(null, nsfw, null);
+    }
+
+    /**
+     * List image types and optionally previews for each of them.
+     *
+     * @param preview Whether or not previews should be included.
+     *
+     * @return Image types matching the filters and optional previews for them.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes(@Nullable PreviewMode preview) {
+        return getImageTypes(null, null, preview);
+    }
+
+    /**
+     * List image types in the API.
+     *
+     * @return Image types available.
+     */
+    @CheckReturnValue
+    @Nonnull
+    public PendingRequest<PreviewImage> getImageTypes() {
+        return getImageTypes(null, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     * @param fileType Filter for type of file (JPG, PNG, GIF).
+     *
+     * @return A random image matching the filters.
+     */
     @CheckReturnValue
     @Nonnull
     public PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable FileType fileType) {
@@ -122,13 +275,55 @@ public class Weeb4J extends Reliqua {
             }
             fileType.appendTo(qsb);
         }
-        return createRequest("/images/random", createRequest(qsb.build()), response->{
+        return createRequest("/images/random", createRequest(qsb.build()), 200, response->{
+            if(response == null) throw new RuntimeException("Response should never be null");
             JSONObject json = new JSONObject(response.string());
-            if(json.getInt("status") == 403) {
-                throw new MissingScopeException(json.getString("message"));
-            }
             return Image.fromJSON(Weeb4J.this, json);
-        });
+        }, Weeb4J::handleError);
+    }
+
+    /**
+     * Get an image's info from the ID.
+     *
+     * @param id The image id.
+     *
+     * @return The image info. Returns null if the image doesn't exist.
+     */
+    public PendingRequest<Image> getImageById(String id) {
+        return createRequest("/images/" + id, createRequest(apiBase + "/images/" + id), 200, response->{
+            if(response == null) throw new RuntimeException("Response should never be null");
+            JSONObject json = new JSONObject(response.string());
+            return Image.fromJSON(Weeb4J.this, json);
+        }, Weeb4J::handleError);
+    }
+
+    private static <T> void handleError(RequestContext<T> context) throws IOException {
+        Response response = context.getResponse();
+        ResponseBody body = response.body();
+        if(body == null) {
+            context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + " (No body)", context.getCallStack()));
+            return;
+        }
+        switch(context.getResponse().code()) {
+            case 403:
+                context.getErrorConsumer().accept(new MissingScopeException(new JSONObject(
+                        body.string()
+                ).getString("message"), context.getCallStack()));
+                break;
+            case 404:
+                context.getSuccessConsumer().accept(null);
+                break;
+            default:
+                JSONObject json = null;
+                try {
+                    json = new JSONObject(body.string());
+                } catch(JSONException ignored) {}
+                if(json != null) {
+                    context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + ": " + json.getString("message"), context.getCallStack()));
+                } else {
+                    context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code(), context.getCallStack()));
+                }
+        }
     }
 
     @CheckReturnValue

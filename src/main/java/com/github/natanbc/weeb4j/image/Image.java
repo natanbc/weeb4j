@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unused")
-public class Image {
+public final class Image {
     private final Weeb4J api;
     private final String id;
     private final String type;
@@ -182,7 +182,7 @@ public class Image {
 
     @Nonnull
     @CheckReturnValue
-    public static Image fromJSON(Weeb4J api, JSONObject object) {
+    public static Image fromJSON(@Nonnull Weeb4J api, @Nonnull JSONObject object) {
         JSONArray tagsRaw = object.getJSONArray("tags");
         List<Tag> tags = new ArrayList<>(tagsRaw.length());
         for(int i = 0, j = tagsRaw.length(); i < j; i++) {

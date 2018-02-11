@@ -5,17 +5,17 @@ import com.github.natanbc.weeb4j.util.QueryStringBuilder;
 import javax.annotation.Nonnull;
 
 @SuppressWarnings("unused")
-public enum HiddenMode implements QueryParam {
-    ONLY {
+public enum PreviewMode implements QueryParam {
+    SHOW {
         @Override
         public void appendTo(@Nonnull QueryStringBuilder builder) {
-            builder.append("hidden", "true");
+            builder.append("preview", "true");
         }
     },
     HIDE {
         @Override
         public void appendTo(@Nonnull QueryStringBuilder builder) {
-            builder.append("hidden", "false");
+            builder.append("preview", "false");
         }
     },
     DEFAULT {
