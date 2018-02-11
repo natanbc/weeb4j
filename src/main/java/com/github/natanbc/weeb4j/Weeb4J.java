@@ -8,8 +8,8 @@ import com.github.natanbc.reliqua.request.RequestException;
 import com.github.natanbc.weeb4j.image.FileType;
 import com.github.natanbc.weeb4j.image.HiddenMode;
 import com.github.natanbc.weeb4j.image.Image;
+import com.github.natanbc.weeb4j.image.ImageTypes;
 import com.github.natanbc.weeb4j.image.NsfwFilter;
-import com.github.natanbc.weeb4j.image.PreviewImage;
 import com.github.natanbc.weeb4j.image.PreviewMode;
 import com.github.natanbc.weeb4j.util.QueryStringBuilder;
 import okhttp3.OkHttpClient;
@@ -126,7 +126,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable PreviewMode preview) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable PreviewMode preview) {
         QueryStringBuilder qsb = new QueryStringBuilder()
                 .append(apiBase + "/images/types");
         if(hidden != null) {
@@ -141,7 +141,7 @@ public class Weeb4J extends Reliqua {
         return createRequest("/images/types", createRequest(qsb.build()), 200, response->{
             if(response == null) throw new RuntimeException("Response should never be null");
             JSONObject json = new JSONObject(response.string());
-            return PreviewImage.fromJSON(Weeb4J.this, json);
+            return ImageTypes.fromJSON(Weeb4J.this, json);
         }, Weeb4J::handleError);
     }
 
@@ -155,7 +155,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, NsfwFilter nsfw) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, NsfwFilter nsfw) {
         return getImageTypes(hidden, nsfw, null);
     }
 
@@ -169,7 +169,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden, PreviewMode preview) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, PreviewMode preview) {
         return getImageTypes(hidden, null, preview);
     }
 
@@ -183,7 +183,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable NsfwFilter nsfw, PreviewMode preview) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw, PreviewMode preview) {
         return getImageTypes(null, nsfw, preview);
     }
 
@@ -196,7 +196,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable HiddenMode hidden) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden) {
         return getImageTypes(hidden, null, null);
     }
 
@@ -209,7 +209,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable NsfwFilter nsfw) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw) {
         return getImageTypes(null, nsfw, null);
     }
 
@@ -222,7 +222,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes(@Nullable PreviewMode preview) {
+    public PendingRequest<ImageTypes> getImageTypes(@Nullable PreviewMode preview) {
         return getImageTypes(null, null, preview);
     }
 
@@ -233,7 +233,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<PreviewImage> getImageTypes() {
+    public PendingRequest<ImageTypes> getImageTypes() {
         return getImageTypes(null, null, null);
     }
 
