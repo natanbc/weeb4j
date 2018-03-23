@@ -1,4 +1,4 @@
-package com.github.natanbc.weeb4j.image;
+package com.github.natanbc.weeb4j.internal;
 
 import com.github.natanbc.weeb4j.util.QueryStringBuilder;
 

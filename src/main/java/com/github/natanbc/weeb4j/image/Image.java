@@ -2,19 +2,19 @@ package com.github.natanbc.weeb4j.image;
 
 import com.github.natanbc.reliqua.request.PendingRequest;
 import com.github.natanbc.weeb4j.Weeb4J;
-import okhttp3.Request;
-import okhttp3.ResponseBody;
+import com.github.natanbc.weeb4j.util.IOUtils;
+import com.github.natanbc.weeb4j.util.InputStreamFunction;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Image {
     private final Weeb4J api;
     private final String id;
@@ -171,14 +171,18 @@ public final class Image {
     @Nonnull
     @CheckReturnValue
     public PendingRequest<byte[]> download() {
-        return new PendingRequest<byte[]>(api, new Request.Builder().get().url(url), url, 200) {
-            @Nullable
-            @Override
-            protected byte[] mapData(@Nullable ResponseBody response) throws IOException {
-                if(response == null) throw new RuntimeException("Response should never be null");
-                return response.bytes();
-            }
-        };
+        return download(IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Applies a given function to an InputStream of this image's bytes, returning the result.
+     *
+     * @param function Mapper to convert the InputStream to another form of data. <strong>The input stream is closed after the mapper returns.</strong>
+     *
+     * @return A request for this image's bytes.
+     */
+    public <T> PendingRequest<T> download(InputStreamFunction<T> function) {
+        return api.download(url, function);
     }
 
     @Nonnull
@@ -199,7 +203,7 @@ public final class Image {
                 object.getString("account"),
                 object.getBoolean("hidden"),
                 object.getBoolean("nsfw"),
-                tags,
+                Collections.unmodifiableList(tags),
                 object.optString("source", null),
                 object.getString("url")
         );

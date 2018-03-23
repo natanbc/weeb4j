@@ -3,17 +3,22 @@
 
 Java wrapper for the weeb.sh API
 
-## Usage
+## Basic Usage
 
 ```java
 Weeb4J api = new Weeb4J.Builder().setToken(TokenType.WOLKE /* or BEARER */, "my_token").build();
 
-api.getImageTypes().async(types->{
-  api.getRandomImage(types.get(0), null, HiddenMode.DEFAULT, NsfwFilter.NO_NSFW, FileType.PNG).async(image->{
-    image.download().async(bytes->{
-      System.out.println("Downloaded image " + image.getId() + ", with " + bytes.length + " bytes");
-    });
-  });
+//async call
+api.getImageTypes().async(data->{
+    //blocking call
+    Image image = api.getRandomImage(data.getTypes().get(0), null, HiddenMode.DEFAULT, NsfwFilter.NO_NSFW, FileType.PNG).execute();
+    try {
+        //futures are supported too
+        byte[] bytes = image.download().submit().get();
+        System.out.println("Downloaded image " + image.getId() + ", with " + bytes.length + " bytes");
+    } catch(InterruptedException|ExecutionException e) {
+        e.printStackTrace();
+    }
 });
 ```
 

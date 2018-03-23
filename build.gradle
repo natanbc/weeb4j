@@ -7,7 +7,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
-def versionObj = new Version(major: 2, minor: 1, revision: 0)
+def versionObj = new Version(major: 3, minor: 0, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     //HTTP
-    compile 'com.github.natanbc:reliqua:1.2'
+    compile 'com.github.natanbc:reliqua:2.0.1'
 
     //JSON parser
     compile 'org.json:json:20170516'
@@ -40,6 +40,7 @@ task sourcesForRelease(type: Copy) {
             VERSION_MAJOR: versionObj.getMajor(),
             VERSION_MINOR: versionObj.getMinor(),
             VERSION_REVISION: versionObj.getRevision(),
+            COMMIT_HASH: getCommitHash()
     ])
 }
 
@@ -139,6 +140,12 @@ bintrayUpload {
 
     onlyIf { !getProjectProperty("bintrayUsername").empty }
     onlyIf { !getProjectProperty("bintrayApiKey").empty }
+}
+
+static def getCommitHash() {
+    def p = Runtime.getRuntime().exec("git rev-parse HEAD")
+    p.waitFor()
+    p.getIn().text
 }
 
 class Version {

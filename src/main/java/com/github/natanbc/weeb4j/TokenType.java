@@ -4,6 +4,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.Objects;
 
+@SuppressWarnings("unused")
 public enum TokenType {
     BEARER("Bearer"), WOLKE("Wolke");
 

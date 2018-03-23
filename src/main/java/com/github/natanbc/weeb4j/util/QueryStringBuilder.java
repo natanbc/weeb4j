@@ -5,7 +5,10 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("UnusedReturnValue")
 public class QueryStringBuilder {
+    private static final String UNSAFE_CHARS = " %$&+,/:;=?@<>#%";
+
     private final StringBuilder sb = new StringBuilder();
     private boolean hasQueryParams;
 
@@ -56,6 +59,6 @@ public class QueryStringBuilder {
     }
 
     private static boolean isUnsafe(char ch) {
-        return ch > 128 || " %$&+,/:;=?@<>#%".indexOf(ch) >= 0;
+        return ch > 128 || UNSAFE_CHARS.indexOf(ch) >= 0;
     }
 }

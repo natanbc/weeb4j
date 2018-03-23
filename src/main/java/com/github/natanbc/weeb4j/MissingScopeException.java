@@ -4,7 +4,7 @@ import com.github.natanbc.reliqua.request.RequestException;
 
 @SuppressWarnings("WeakerAccess")
 public class MissingScopeException extends RequestException {
-    protected MissingScopeException(String message, StackTraceElement[] elements) {
+    public MissingScopeException(String message, StackTraceElement[] elements) {
         super(message, elements);
     }
 }

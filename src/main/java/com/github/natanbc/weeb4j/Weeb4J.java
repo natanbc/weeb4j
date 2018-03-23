@@ -1,51 +1,56 @@
 package com.github.natanbc.weeb4j;
 
-import com.github.natanbc.reliqua.Reliqua;
 import com.github.natanbc.reliqua.limiter.RateLimiter;
+import com.github.natanbc.reliqua.limiter.factory.RateLimiterFactory;
 import com.github.natanbc.reliqua.request.PendingRequest;
-import com.github.natanbc.reliqua.request.RequestContext;
-import com.github.natanbc.reliqua.request.RequestException;
 import com.github.natanbc.weeb4j.image.FileType;
 import com.github.natanbc.weeb4j.image.HiddenMode;
 import com.github.natanbc.weeb4j.image.Image;
 import com.github.natanbc.weeb4j.image.ImageTypes;
 import com.github.natanbc.weeb4j.image.NsfwFilter;
 import com.github.natanbc.weeb4j.image.PreviewMode;
-import com.github.natanbc.weeb4j.util.QueryStringBuilder;
+import com.github.natanbc.weeb4j.imagegen.DiscordStatus;
+import com.github.natanbc.weeb4j.imagegen.LicenseData;
+import com.github.natanbc.weeb4j.internal.Weeb4JImpl;
+import com.github.natanbc.weeb4j.util.IOUtils;
+import com.github.natanbc.weeb4j.util.InputStreamFunction;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.awt.Color;
 import java.util.List;
+import java.util.Objects;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class Weeb4J extends Reliqua {
-    public static final String VERSION_MAJOR = "@VERSION_MAJOR@";
-    public static final String VERSION_MINOR = "@VERSION_MINOR@";
-    public static final String VERSION_REVISION = "@VERSION_REVISION@";
-    @SuppressWarnings("ConstantConditions")
-    public static final String VERSION = VERSION_MAJOR.startsWith("@") ? "dev" : String.format("%s.%s.%s", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+public interface Weeb4J {
+    /**
+     * Returns the environment provided during creation.
+     *
+     * @return The provided environment.
+     */
+    @CheckReturnValue
+    @Nonnull
+    Environment getEnvironment();
 
-    private final String apiBase;
-    private final String token;
-    private final String userAgent;
+    /**
+     * Returns the API token provided during creation.
+     *
+     * @return The provided API token.
+     */
+    @CheckReturnValue
+    @Nonnull
+    String getToken();
 
-    Weeb4J(RateLimiter limiter, OkHttpClient client, boolean trackCallSites, Environment environment, String token, String userAgent) {
-        super(limiter, client, trackCallSites);
-        this.apiBase = environment.getApiBase();
-        this.token = token;
-        this.userAgent = userAgent;
-    }
+    /**
+     * Returns the token type provided during creation.
+     *
+     * @return The provided token type.
+     */
+    @CheckReturnValue
+    @Nonnull
+    TokenType getTokenType();
 
     /**
      * Retrieve tags matching the given filters.
@@ -57,26 +62,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw) {
-        QueryStringBuilder qsb = new QueryStringBuilder()
-                .append(apiBase + "/images/tags");
-        if(hidden != null) {
-            hidden.appendTo(qsb);
-        }
-        if(nsfw != null) {
-            nsfw.appendTo(qsb);
-        }
-        return createRequest("/images/tags", createRequest(qsb.build()), 200, response->{
-            if(response == null) throw new RuntimeException("Response should never be null");
-            JSONObject json = new JSONObject(response.string());
-            JSONArray types = json.getJSONArray("tags");
-            List<String> list = new ArrayList<>(types.length());
-            for(int i = 0, j = types.length(); i < j; i++) {
-                list.add(types.getString(i));
-            }
-            return Collections.unmodifiableList(list);
-        }, Weeb4J::handleError);
-    }
+    PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw);
 
     /**
      * Retrieve tags matching the given filters.
@@ -87,7 +73,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden) {
+    default PendingRequest<List<String>> getImageTags(@Nullable HiddenMode hidden) {
         return getImageTags(hidden, null);
     }
 
@@ -100,7 +86,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTags(@Nullable NsfwFilter nsfw) {
+    default PendingRequest<List<String>> getImageTags(@Nullable NsfwFilter nsfw) {
         return getImageTags(null, nsfw);
     }
 
@@ -111,7 +97,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<List<String>> getImageTags() {
+    default PendingRequest<List<String>> getImageTags() {
         return getImageTags(null, null);
     }
 
@@ -126,24 +112,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable PreviewMode preview) {
-        QueryStringBuilder qsb = new QueryStringBuilder()
-                .append(apiBase + "/images/types");
-        if(hidden != null) {
-            hidden.appendTo(qsb);
-        }
-        if(nsfw != null) {
-            nsfw.appendTo(qsb);
-        }
-        if(preview != null) {
-            preview.appendTo(qsb);
-        }
-        return createRequest("/images/types", createRequest(qsb.build()), 200, response->{
-            if(response == null) throw new RuntimeException("Response should never be null");
-            JSONObject json = new JSONObject(response.string());
-            return ImageTypes.fromJSON(Weeb4J.this, json);
-        }, Weeb4J::handleError);
-    }
+    PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable PreviewMode preview);
 
     /**
      * List image types and optionally previews for each of them.
@@ -155,7 +124,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, NsfwFilter nsfw) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, NsfwFilter nsfw) {
         return getImageTypes(hidden, nsfw, null);
     }
 
@@ -169,7 +138,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, PreviewMode preview) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden, PreviewMode preview) {
         return getImageTypes(hidden, null, preview);
     }
 
@@ -183,7 +152,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw, PreviewMode preview) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw, PreviewMode preview) {
         return getImageTypes(null, nsfw, preview);
     }
 
@@ -196,7 +165,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable HiddenMode hidden) {
         return getImageTypes(hidden, null, null);
     }
 
@@ -209,7 +178,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable NsfwFilter nsfw) {
         return getImageTypes(null, nsfw, null);
     }
 
@@ -222,7 +191,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes(@Nullable PreviewMode preview) {
+    default PendingRequest<ImageTypes> getImageTypes(@Nullable PreviewMode preview) {
         return getImageTypes(null, null, preview);
     }
 
@@ -233,7 +202,7 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<ImageTypes> getImageTypes() {
+    default PendingRequest<ImageTypes> getImageTypes() {
         return getImageTypes(null, null, null);
     }
 
@@ -250,36 +219,167 @@ public class Weeb4J extends Reliqua {
      */
     @CheckReturnValue
     @Nonnull
-    public PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable FileType fileType) {
-        if(type == null && (tags == null || tags.isEmpty())) {
-            throw new IllegalArgumentException("Either type or tags must be present");
-        }
+    PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable FileType fileType);
 
-        QueryStringBuilder qsb = new QueryStringBuilder()
-                .append(apiBase + "/images/random");
-        if(type != null) {
-            qsb.append("type", type);
-        }
-        if(tags != null && tags.size() > 0) {
-            qsb.append("tags", tags);
-        }
-        if(hidden != null) {
-            hidden.appendTo(qsb);
-        }
-        if(nsfw != null) {
-            nsfw.appendTo(qsb);
-        }
-        if(fileType != null) {
-            if(fileType == FileType.UNKNOWN) {
-                throw new IllegalArgumentException("UNKNOWN file type may not be used in requests");
-            }
-            fileType.appendTo(qsb);
-        }
-        return createRequest("/images/random", createRequest(qsb.build()), 200, response->{
-            if(response == null) throw new RuntimeException("Response should never be null");
-            JSONObject json = new JSONObject(response.string());
-            return Image.fromJSON(Weeb4J.this, json);
-        }, Weeb4J::handleError);
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw) {
+        return getRandomImage(type, tags, hidden, nsfw, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags, @Nullable HiddenMode hidden) {
+        return getRandomImage(type, tags, hidden, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     * @param fileType Filter for type of file (JPG, PNG, GIF).
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable FileType fileType) {
+        return getRandomImage(type, null, hidden, nsfw, fileType);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw) {
+        return getRandomImage(type, null, hidden, nsfw, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param hidden Filter for hidden images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type,  @Nullable HiddenMode hidden) {
+        return getRandomImage(type, null, hidden, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     * @param fileType Filter for type of file (JPG, PNG, GIF).
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw, @Nullable FileType fileType) {
+        return getRandomImage(null, tags, hidden, nsfw, fileType);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     * @param nsfw Filter for NSFW (not safe for work) images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable List<String> tags, @Nullable HiddenMode hidden, @Nullable NsfwFilter nsfw) {
+        return getRandomImage(null, tags, hidden, nsfw, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param tags Image tags.
+     * @param hidden Filter for hidden images.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable List<String> tags, @Nullable HiddenMode hidden) {
+        return getRandomImage(null, tags, hidden, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     * @param tags Image tags.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type, @Nullable List<String> tags) {
+        return getRandomImage(type, tags, null, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param type Image type.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable String type) {
+        return getRandomImage(type, null, null, null, null);
+    }
+
+    /**
+     * Retrieve a random image matching the specified filters.
+     *
+     * @param tags Image tags.
+     *
+     * @return A random image matching the filters.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<Image> getRandomImage(@Nullable List<String> tags) {
+        return getRandomImage(null, tags, null, null, null);
     }
 
     /**
@@ -289,56 +389,266 @@ public class Weeb4J extends Reliqua {
      *
      * @return The image info. Returns null if the image doesn't exist.
      */
-    public PendingRequest<Image> getImageById(String id) {
-        return createRequest("/images/" + id, createRequest(apiBase + "/images/" + id), 200, response->{
-            if(response == null) throw new RuntimeException("Response should never be null");
-            JSONObject json = new JSONObject(response.string());
-            return Image.fromJSON(Weeb4J.this, json);
-        }, Weeb4J::handleError);
-    }
-
-    private static <T> void handleError(RequestContext<T> context) throws IOException {
-        Response response = context.getResponse();
-        ResponseBody body = response.body();
-        if(body == null) {
-            context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + " (No body)", context.getCallStack()));
-            return;
-        }
-        switch(context.getResponse().code()) {
-            case 403:
-                context.getErrorConsumer().accept(new MissingScopeException(new JSONObject(
-                        body.string()
-                ).getString("message"), context.getCallStack()));
-                break;
-            case 404:
-                context.getSuccessConsumer().accept(null);
-                break;
-            default:
-                JSONObject json = null;
-                try {
-                    json = new JSONObject(body.string());
-                } catch(JSONException ignored) {}
-                if(json != null) {
-                    context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + ": " + json.getString("message"), context.getCallStack()));
-                } else {
-                    context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code(), context.getCallStack()));
-                }
-        }
-    }
-
     @CheckReturnValue
     @Nonnull
-    private Request.Builder createRequest(@Nonnull String url) {
-        return new Request.Builder()
-                .header("Authorization", token)
-                .header("User-Agent", userAgent)
-                .url(url)
-                .get();
+    PendingRequest<Image> getImageById(@Nonnull String id);
+
+    /**
+     * Generates an awoo image. Only RGB bits are used, alpha is ignored.
+     *
+     * @param faceColor Color used for the face. Defaults to 0xFFF0D3.
+     * @param hairColor Color used for the hair. Defaults to 0xCC817C.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateAwoo(@Nullable Color faceColor, @Nullable Color hairColor, @Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates an awoo image. Only RGB bits are used, alpha is ignored.
+     *
+     * @param faceColor Color used for the face.
+     * @param hairColor Color used for the hair.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateAwoo(@Nullable Color faceColor, @Nullable Color hairColor) {
+        return generateAwoo(faceColor, hairColor, IOUtils.READ_FULLY);
     }
 
-    public static class Builder {
-        private RateLimiter limiter;
+    /**
+     * Generates an awoo image. Only RGB bits are used, alpha is ignored.
+     *
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default <T> PendingRequest<T> generateAwoo(@Nonnull InputStreamFunction<T> mapper) {
+        return generateAwoo(null, null, mapper);
+    }
+
+    /**
+     * Generates an awoo image. Only RGB bits are used, alpha is ignored.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateAwoo() {
+        return generateAwoo(IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a pair of eyes looking in random directions.
+     *
+     * @param mapper Maps the image's input stream
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateEyes(@Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a pair of eyes looking in random directions.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateEyes() {
+        return generateEyes(IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a won image.
+     *
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateWon(@Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a won image.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateWon() {
+        return generateWon(IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a discord status for a given avatar.
+     *
+     * @param status Status to display. Defaults to online.
+     * @param avatarUrl Avatar url.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateStatus(@Nullable DiscordStatus status, @Nonnull String avatarUrl, @Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a discord status for a given avatar.
+     *
+     * @param avatarUrl Avatar url.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default <T> PendingRequest<T> generateStatus(@Nonnull String avatarUrl, @Nonnull InputStreamFunction<T> mapper) {
+        return generateStatus(null, avatarUrl, mapper);
+    }
+
+    /**
+     * Generates a discord status for a given avatar.
+     *
+     * @param status Status to display. Defaults to online.
+     * @param avatarUrl Avatar url.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateStatus(@Nullable DiscordStatus status, @Nonnull String avatarUrl) {
+        return generateStatus(status, avatarUrl, IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a discord status for a given avatar.
+     *
+     * @param avatarUrl Avatar url.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateStatus(@Nonnull String avatarUrl) {
+        return generateStatus(avatarUrl, IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a license card.
+     *
+     * @param data Data to show on the card.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     *
+     * @see com.github.natanbc.weeb4j.imagegen.LicenseBuilder
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateLicense(@Nonnull LicenseData data, @Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a license card.
+     *
+     * @param data Data to show on the card.
+     *
+     * @return The generated image.
+     *
+     * @see com.github.natanbc.weeb4j.imagegen.LicenseBuilder
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateLicense(@Nonnull LicenseData data) {
+        return generateLicense(data, IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a waifu insult.
+     *
+     * @param avatarUrl Avatar of the waifu to be insulted.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateWaifuInsult(@Nonnull String avatarUrl, @Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a waifu insult.
+     *
+     * @param avatarUrl Avatar of the waifu to be insulted.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateWaifuInsult(@Nonnull String avatarUrl) {
+        return generateWaifuInsult(avatarUrl, IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Generates a ship image.
+     *
+     * @param firstAvatarUrl First avatar of the ship.
+     * @param secondAvatarUrl Second avatar of the ship.
+     * @param mapper Maps the image's input stream.
+     * @param <T> Type returned by the mapper.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> generateLoveship(@Nonnull String firstAvatarUrl, @Nonnull String secondAvatarUrl, @Nonnull InputStreamFunction<T> mapper);
+
+    /**
+     * Generates a ship image.
+     *
+     * @param firstAvatarUrl First avatar of the ship.
+     * @param secondAvatarUrl Second avatar of the ship.
+     *
+     * @return The generated image.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<byte[]> generateLoveship(@Nonnull String firstAvatarUrl, @Nonnull String secondAvatarUrl) {
+        return generateLoveship(firstAvatarUrl, secondAvatarUrl, IOUtils.READ_FULLY);
+    }
+
+    /**
+     * Downloads a given url.
+     *
+     * @param url URL to download.
+     * @param mapper Maps the download input stream
+     * @param <T> Type returned by the mapper
+     *
+     * @return The downloaded data.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> download(String url, InputStreamFunction<T> mapper);
+
+    class Builder {
         private OkHttpClient client;
+        private RateLimiterFactory rateLimiterFactory;
+        private TokenType tokenType;
         private String token;
         private String userAgent;
         private boolean trackCallSites;
@@ -346,8 +656,20 @@ public class Weeb4J extends Reliqua {
 
         @CheckReturnValue
         @Nonnull
-        public Builder setRateLimiter(@Nullable RateLimiter limiter) {
-            this.limiter = limiter;
+        @Deprecated
+        public Builder setRateLimiter(RateLimiter limiter) {
+            return setRateLimiterFactory(new RateLimiterFactory() {
+                @Override
+                protected RateLimiter createRateLimiter(String key) {
+                    return limiter;
+                }
+            });
+        }
+
+        @CheckReturnValue
+        @Nonnull
+        public Builder setRateLimiterFactory(@Nullable RateLimiterFactory factory) {
+            this.rateLimiterFactory = factory;
             return this;
         }
 
@@ -361,7 +683,8 @@ public class Weeb4J extends Reliqua {
         @CheckReturnValue
         @Nonnull
         public Builder setToken(@Nonnull TokenType type, @Nonnull String token) {
-            this.token = type.format(token);
+            this.tokenType = Objects.requireNonNull(type, "Type may not be null");
+            this.token = Objects.requireNonNull(token, "Token may not be null");
             return this;
         }
 
@@ -390,13 +713,14 @@ public class Weeb4J extends Reliqua {
         @Nonnull
         public Weeb4J build() {
             if(token == null) throw new IllegalStateException("Token not set");
-            return new Weeb4J(
-                    limiter,
+            return new Weeb4JImpl(
                     client == null ? new OkHttpClient() : client,
+                    rateLimiterFactory,
                     trackCallSites,
                     environment == null ? Environment.PRODUCTION : environment,
+                    tokenType,
                     token,
-                    userAgent == null ? "Weeb4J/" + VERSION + "/" + (environment == null ? "production" : environment.name().toLowerCase()) : userAgent
+                    userAgent == null ? "Weeb4J/" + WeebInfo.VERSION + "/" + (environment == null ? "production" : environment.name().toLowerCase()) : userAgent
             );
         }
     }
