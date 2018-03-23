@@ -145,7 +145,7 @@ bintrayUpload {
 static def getCommitHash() {
     def p = Runtime.getRuntime().exec("git rev-parse HEAD")
     p.waitFor()
-    p.getIn().text
+    p.getIn().text.trim()
 }
 
 class Version {
