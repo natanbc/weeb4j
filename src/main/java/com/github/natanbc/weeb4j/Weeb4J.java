@@ -53,6 +53,28 @@ public interface Weeb4J {
     TokenType getTokenType();
 
     /**
+     * Returns metadata of the provided token.
+     *
+     * @param token Token to be analyzed.
+     *
+     * @return The metadata for the given token.
+     */
+    @CheckReturnValue
+    @Nonnull
+    PendingRequest<TokenInfo> getTokenInfo(@Nonnull String token);
+
+    /**
+     * Returns metadata of the token provided during creation.
+     *
+     * @return The metadata for the given token.
+     */
+    @CheckReturnValue
+    @Nonnull
+    default PendingRequest<TokenInfo> getTokenInfo() {
+        return getTokenInfo(getToken());
+    }
+
+    /**
      * Retrieve tags matching the given filters.
      *
      * @param hidden Filter for hidden tags.

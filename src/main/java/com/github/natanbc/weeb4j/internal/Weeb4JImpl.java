@@ -3,7 +3,9 @@ package com.github.natanbc.weeb4j.internal;
 import com.github.natanbc.reliqua.Reliqua;
 import com.github.natanbc.reliqua.limiter.factory.RateLimiterFactory;
 import com.github.natanbc.reliqua.request.PendingRequest;
+import com.github.natanbc.reliqua.util.StatusCodeValidator;
 import com.github.natanbc.weeb4j.Environment;
+import com.github.natanbc.weeb4j.TokenInfo;
 import com.github.natanbc.weeb4j.TokenType;
 import com.github.natanbc.weeb4j.Weeb4J;
 import com.github.natanbc.weeb4j.image.FileType;
@@ -70,6 +72,16 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         return type;
     }
 
+    @Nonnull
+    @Override
+    public PendingRequest<TokenInfo> getTokenInfo(@Nonnull String token) {
+        Objects.requireNonNull(token, "Token may not be null");
+        return createRequest(newRequestBuilder(apiBase + "/accounts/validate/" + token + "?wolkeToken=1"))
+                .setRateLimiter(getRateLimiter("/accounts/validate"))
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
+                .build(response->TokenInfo.fromJSON(RequestUtils.toJSONObject(response), token), RequestUtils::handleError);
+    }
+
     @CheckReturnValue
     @Nonnull
     @Override
@@ -84,7 +96,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         }
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/images/tags"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->{
                     JSONObject json = RequestUtils.toJSONObject(response);
                     JSONArray types = json.getJSONArray("tags");
@@ -112,7 +124,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
             preview.appendTo(qsb);
         }
         return createRequest(newRequestBuilder(qsb.build()))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .setRateLimiter(getRateLimiter("/images/types"))
                 .build(response->ImageTypes.fromJSON(this, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
     }
@@ -147,7 +159,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         }
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/images/random"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->Image.fromJSON(this, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
     }
 
@@ -157,7 +169,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
     public PendingRequest<Image> getImageById(@Nonnull String id) {
         return createRequest(newRequestBuilder(apiBase + "/images/info/" + id))
                 .setRateLimiter(getRateLimiter("/images/info"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->Image.fromJSON(this, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
     }
 
@@ -177,7 +189,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         }
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/auto-image/generate"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -191,7 +203,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
                 .append("type", "eyes");
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/auto-image/generate"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -205,7 +217,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
                 .append("type", "won");
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/auto-image/generate"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -224,7 +236,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         }
         return createRequest(newRequestBuilder(qsb.build()))
                 .setRateLimiter(getRateLimiter("/auto-image/discord-status"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -257,7 +269,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
 
         return createRequest(newRequestBuilder(apiBase + "/auto-image/license").post(RequestUtils.toBody(body)))
                 .setRateLimiter(getRateLimiter("/auto-image/license"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -272,7 +284,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
 
         return createRequest(newRequestBuilder(apiBase + "/auto-image/waifu-insult").post(RequestUtils.toBody(body)))
                 .setRateLimiter(getRateLimiter("/auto-image/waifu-insult"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -289,7 +301,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
 
         return createRequest(newRequestBuilder(apiBase + "/auto-image/love-ship").post(RequestUtils.toBody(body)))
                 .setRateLimiter(getRateLimiter("/auto-image/love-ship"))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->mapper.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -300,7 +312,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         Objects.requireNonNull(url, "URL may not be null");
         Objects.requireNonNull(function, "Function may not be null");
         return createRequest(newRequestBuilder(url))
-                .setStatusCodeValidator(code->code == 200)
+                .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
                 .build(response->function.accept(RequestUtils.getInputStream(response)), RequestUtils::handleError);
     }
 
@@ -310,6 +322,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         return new Request.Builder()
                 .header("Authorization", type.format(token))
                 .header("User-Agent", userAgent)
+                .header("Accept-Encoding", "gzip, deflate") //we can handle gzip data
                 .url(url)
                 .get();
     }

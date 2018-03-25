@@ -14,6 +14,7 @@ import org.json.JSONTokener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 @SuppressWarnings("WeakerAccess")
 public class RequestUtils {
@@ -31,11 +32,16 @@ public class RequestUtils {
         ResponseBody body = response.body();
         if(body == null) throw new IllegalStateException("Body should never be null");
         String encoding = response.header("Content-Encoding");
-        if (encoding != null && encoding.equals("gzip")) {
-            try {
-                return new GZIPInputStream(body.byteStream());
-            } catch(IOException e) {
-                throw new IllegalStateException("Received Content-Encoding header of gzip, but data is not valid gzip", e);
+        if (encoding != null) {
+            switch(encoding.toLowerCase()) {
+                case "gzip":
+                    try {
+                        return new GZIPInputStream(body.byteStream());
+                    } catch(IOException e) {
+                        throw new IllegalStateException("Received Content-Encoding header of gzip, but data is not valid gzip", e);
+                    }
+                case "deflate":
+                    return new InflaterInputStream(body.byteStream());
             }
         }
         return body.byteStream();

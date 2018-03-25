@@ -7,7 +7,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
-def versionObj = new Version(major: 3, minor: 0, revision: 0)
+def versionObj = new Version(major: 3, minor: 1, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     //HTTP
-    compile 'com.github.natanbc:reliqua:2.0.1'
+    compile 'com.github.natanbc:reliqua:2.1'
 
     //JSON parser
     compile 'org.json:json:20170516'
