@@ -14,6 +14,7 @@ import com.github.natanbc.weeb4j.imagegen.LicenseData;
 import com.github.natanbc.weeb4j.internal.Weeb4JImpl;
 import com.github.natanbc.weeb4j.util.IOUtils;
 import com.github.natanbc.weeb4j.util.InputStreamFunction;
+import com.github.natanbc.weeb4j.util.Utils;
 import okhttp3.OkHttpClient;
 
 import javax.annotation.CheckReturnValue;
@@ -672,7 +673,9 @@ public interface Weeb4J {
         private RateLimiterFactory rateLimiterFactory;
         private TokenType tokenType;
         private String token;
-        private String userAgent;
+        private String botName;
+        private String botVersion;
+        private String botEnvironment;
         private boolean trackCallSites;
         private Environment environment;
 
@@ -712,9 +715,24 @@ public interface Weeb4J {
 
         @CheckReturnValue
         @Nonnull
+        @Deprecated
         public Builder setUserAgent(@Nullable String userAgent) {
-            this.userAgent = userAgent;
             return this;
+        }
+
+        @CheckReturnValue
+        @Nonnull
+        public Builder setBotInfo(@Nonnull String botName, @Nonnull String botVersion, @Nullable String botEnvironment) {
+            this.botName = Objects.requireNonNull(botName);
+            this.botVersion = Objects.requireNonNull(botVersion);
+            this.botEnvironment = botEnvironment;
+            return this;
+        }
+
+        @CheckReturnValue
+        @Nonnull
+        public Builder setBotInfo(@Nonnull String botName, @Nonnull String botVersion) {
+            return setBotInfo(botName, botVersion, null);
         }
 
         @CheckReturnValue
@@ -735,6 +753,13 @@ public interface Weeb4J {
         @Nonnull
         public Weeb4J build() {
             if(token == null) throw new IllegalStateException("Token not set");
+            if(botName == null || botVersion == null) {
+                Weeb4JImpl.LOGGER.warn("No bot name or version specified. These values will be required in a future release. Set them with Weeb4J.Builder#setBotInfo");
+            }
+            if(botEnvironment == null) {
+                Weeb4JImpl.LOGGER.info("No bot environment specified, defaulting to 'production'");
+            }
+            String name = botName == null ? Utils.tryFindMainClass() : botName;
             return new Weeb4JImpl(
                     client == null ? new OkHttpClient() : client,
                     rateLimiterFactory,
@@ -742,7 +767,15 @@ public interface Weeb4J {
                     environment == null ? Environment.PRODUCTION : environment,
                     tokenType,
                     token,
-                    userAgent == null ? "Weeb4J/" + WeebInfo.VERSION + "/" + (environment == null ? "production" : environment.name().toLowerCase()) : userAgent
+                                 //<bot name>/<bot version>/<bot environment>; (Weeb4J/<weeb4j version>/<weeb.sh environment>/<weeb4j commit>)
+                    String.format("%s/%s/%s; (Weeb4J/%s/%s/%s)",
+                            name == null ? "Unknown bot name" : name,
+                            botVersion == null ? "Unknown bot version" : botVersion,
+                            botEnvironment == null ? "production" : botEnvironment,
+                            WeebInfo.VERSION,
+                            environment == null ? "production" : environment.name().toLowerCase(),
+                            WeebInfo.COMMIT
+                    )
             );
         }
     }

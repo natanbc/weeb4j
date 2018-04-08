@@ -24,6 +24,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -36,6 +38,8 @@ import java.util.Objects;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Weeb4JImpl extends Reliqua implements Weeb4J {
+    public static final Logger LOGGER = LoggerFactory.getLogger("Weeb4J");
+
     private final Environment environment;
     private final String apiBase;
     private final TokenType type;
