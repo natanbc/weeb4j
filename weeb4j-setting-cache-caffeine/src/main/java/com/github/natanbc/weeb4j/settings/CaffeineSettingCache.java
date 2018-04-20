@@ -5,7 +5,6 @@ import org.json.JSONObject;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Objects;
 import java.util.Set;
 
 @SuppressWarnings("unused")
