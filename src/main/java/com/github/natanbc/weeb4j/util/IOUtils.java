@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class IOUtils {
     public static final int DEFAULT_BUFFER_SIZE = 4096;
     public static final InputStreamFunction<byte[]> READ_FULLY = readFully(DEFAULT_BUFFER_SIZE);

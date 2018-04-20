@@ -54,18 +54,23 @@ public class RequestUtils {
             context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + " (No body)", context.getCallStack()));
             return;
         }
+        JSONObject json = null;
+        try {
+            json = toJSONObject(response);
+        } catch(JSONException ignored) {}
+        handleErrorCode(json, context);
+    }
+
+    public static <T> void handleErrorCode(JSONObject json, RequestContext<T> context) {
+        Response response = context.getResponse();
         switch(response.code()) {
             case 403:
-                context.getErrorConsumer().accept(new MissingScopeException(toJSONObject(response).getString("message"), context.getCallStack()));
+                context.getErrorConsumer().accept(new MissingScopeException(json == null ? null : json.getString("message"), context.getCallStack()));
                 break;
             case 404:
                 context.getSuccessConsumer().accept(null);
                 break;
             default:
-                JSONObject json = null;
-                try {
-                    json = toJSONObject(response);
-                } catch(JSONException ignored) {}
                 if(json != null) {
                     context.getErrorConsumer().accept(new RequestException("Unexpected status code " + response.code() + ": " + json.getString("message"), context.getCallStack()));
                 } else {

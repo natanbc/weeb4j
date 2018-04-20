@@ -3,6 +3,7 @@ package com.github.natanbc.weeb4j;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
+@SuppressWarnings("unused")
 public enum Environment {
     PRODUCTION("https://api.weeb.sh"), STAGING("https://staging.weeb.sh");
 

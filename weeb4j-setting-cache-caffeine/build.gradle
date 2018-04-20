@@ -1,19 +1,14 @@
-plugins {
-    id 'com.jfrog.bintray' version '1.7.2'
-    id 'java'
-    id 'maven'
-    id 'maven-publish'
-    id 'com.github.ben-manes.versions' version '0.13.0'
-    id 'com.github.johnrengelman.shadow' version '2.0.1'
-}
+apply plugin: 'java'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
-def versionObj = new Version(major: 3, minor: 3, revision: 0)
+def versionObj = new Version(major: 1, minor: 0, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
 
 sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -21,17 +16,9 @@ repositories {
 }
 
 dependencies {
-    //HTTP
-    compile 'com.github.natanbc:reliqua:2.3.2'
+    compileOnly rootProject
 
-    //JSON parser
-    compile 'org.json:json:20170516'
-
-    //Logging
-    compile 'org.slf4j:slf4j-api:1.7.25'
-
-    //Code safety
-    compile 'com.google.code.findbugs:jsr305:3.0.2'
+    compile 'com.github.ben-manes.caffeine:caffeine:2.6.2'
 }
 
 import org.apache.tools.ant.filters.ReplaceTokens
@@ -45,26 +32,6 @@ task sourcesForRelease(type: Copy) {
             VERSION_REVISION: versionObj.getRevision(),
             COMMIT_HASH: getCommitHash()
     ])
-}
-
-compileJava {
-    source = sourcesForRelease.destinationDir
-    classpath = sourceSets.main.compileClasspath
-
-    options.encoding = 'UTF-8'
-
-    dependsOn sourcesForRelease
-}
-
-jar {
-    baseName = project.name
-    manifest {
-        attributes 'Implementation-Version': version
-    }
-}
-
-shadowJar {
-    classifier = "withDependencies"
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -114,26 +81,6 @@ String getProjectProperty(String propertyName) {
         property = project.properties[propertyName]
     }
     return property
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.5'
-}
-
-
-build {
-    dependsOn clean
-    dependsOn jar
-    dependsOn javadocJar
-    dependsOn sourcesJar
-    dependsOn shadowJar
-
-    dependsOn test
-
-    jar.mustRunAfter clean
-    javadocJar.mustRunAfter jar
-    sourcesJar.mustRunAfter javadocJar
-    shadowJar.mustRunAfter sourcesJar
 }
 
 bintrayUpload {

@@ -1,2 +1,4 @@
 rootProject.name = 'weeb4j'
+include 'weeb4j-setting-cache-guava'
+include 'weeb4j-setting-cache-caffeine'
 

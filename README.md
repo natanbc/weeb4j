@@ -3,15 +3,17 @@
 
 Java wrapper for the weeb.sh API
 
-## Basic Usage
+## Images 
 
 ```java
 Weeb4J api = new Weeb4J.Builder().setToken(TokenType.WOLKE /* or BEARER */, "my_token").build();
 
+ImageProvider imageProvider = api.getImageProvider();
+
 //async call
-api.getImageTypes().async(data->{
+imageProvider.getImageTypes().async(data->{
     //blocking call
-    Image image = api.getRandomImage(data.getTypes().get(0), null, HiddenMode.DEFAULT, NsfwFilter.NO_NSFW, FileType.PNG).execute();
+    Image image = imageProvider.getRandomImage(data.getTypes().get(0), null, HiddenMode.DEFAULT, NsfwFilter.NO_NSFW, FileType.PNG).execute();
     try {
         //futures are supported too
         byte[] bytes = image.download().submit().get();
@@ -22,4 +24,36 @@ api.getImageTypes().async(data->{
 });
 ```
 
-Additional information is available in the javadocs
+## Image Generation
+
+```java
+ImageGenerator imageGenerator = api.getImageGenerator();
+
+byte[] image = imageGenerator.generateAwoo(Color.BLUE, Color.RED).execute();
+```
+
+## Reputation
+
+```java
+ReputationManager reputationManager = api.getReputationManager();
+
+reputationManager.giveReputation(to, from).async();
+reputationManager.resetReputation(to).async();
+```
+
+## Settings
+
+```java
+SettingManager settingManager = api.getSettingManager();
+
+settingManager.getSetting("type", "id").async(setting->{
+    JSONObject data = setting == null ? defaultValues : setting.getData();
+    data.put("key", "value");
+    settingManager.saveSetting("type", "id", data).async();
+});
+```
+
+It's recommended to cache settings for 1-5 minutes to avoid spamming the API, specially on frequently
+accessed settings. To do so, use a SettingCache instance, along with either `Weeb4J.Builder#setSettingCache`
+or `SettingManager#setSettingCache`. The artifacts `weeb4j-setting-cache-guava` and `weeb4j-setting-cache-caffeine`
+provide implementations using [guava](https://github.com/google/guava) and [caffeine](https://github.com/ben-manes/caffeine), respectively.
