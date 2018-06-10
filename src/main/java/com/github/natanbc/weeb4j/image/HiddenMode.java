@@ -21,6 +21,8 @@ public enum HiddenMode implements QueryParam {
     },
     DEFAULT {
         @Override
-        public void appendTo(@Nonnull QueryStringBuilder builder) {}
+        public void appendTo(@Nonnull QueryStringBuilder builder) {
+            //don't set anything
+        }
     }
 }

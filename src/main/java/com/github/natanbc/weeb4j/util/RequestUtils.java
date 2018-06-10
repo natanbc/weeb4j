@@ -42,6 +42,8 @@ public class RequestUtils {
                     }
                 case "deflate":
                     return new InflaterInputStream(body.byteStream());
+                default:
+                    return body.byteStream();
             }
         }
         return body.byteStream();

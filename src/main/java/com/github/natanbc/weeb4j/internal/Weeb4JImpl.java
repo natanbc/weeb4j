@@ -44,7 +44,6 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.Color;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -479,16 +478,14 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
                         try {
                             object = RequestUtils.toJSONObject(ctx.getResponse());
                         } catch(Exception ignored) {}
-                        if(object != null) {
-                            if(object.has("status") && object.getInt("status") == 403 && object.has("code")) {
-                                JSONObject user = object.optJSONObject("user");
-                                ctx.getErrorConsumer().accept(new ReputationTransferException(
-                                        object.optString("message", null),
-                                        object.getInt("code"),
-                                        user == null ? null : User.fromJSON(user)
-                                ));
-                                return;
-                            }
+                        if(object != null && object.has("status") && object.getInt("status") == 403 && object.has("code")) {
+                            JSONObject user = object.optJSONObject("user");
+                            ctx.getErrorConsumer().accept(new ReputationTransferException(
+                                    object.optString("message", null),
+                                    object.getInt("code"),
+                                    user == null ? null : User.fromJSON(user)
+                            ));
+                            return;
                         }
                         RequestUtils.handleErrorCode(object, ctx);
                     });
