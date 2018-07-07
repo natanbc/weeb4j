@@ -177,6 +177,7 @@ public final class Image {
      * Applies a given function to an InputStream of this image's bytes, returning the result.
      *
      * @param function Mapper to convert the InputStream to another form of data. <strong>The input stream is closed after the mapper returns.</strong>
+     * @param <T> Type returned by the mapper.
      *
      * @return A request for this image's bytes.
      */
