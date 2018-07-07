@@ -1,7 +1,6 @@
 package com.github.natanbc.weeb4j.image;
 
 import com.github.natanbc.reliqua.request.PendingRequest;
-import com.github.natanbc.weeb4j.Weeb4J;
 import com.github.natanbc.weeb4j.util.IOUtils;
 import com.github.natanbc.weeb4j.util.InputStreamFunction;
 import org.json.JSONArray;
@@ -16,7 +15,7 @@ import java.util.List;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public final class Image {
-    private final Weeb4J api;
+    private final ImageProvider provider;
     private final String id;
     private final String type;
     private final String baseType;
@@ -29,8 +28,8 @@ public final class Image {
     private final String sourceUrl;
     private final String url;
 
-    private Image(Weeb4J api, String id, String type, String baseType, FileType fileType, String mimeType, String account, boolean hidden, boolean nsfw, List<Tag> tags, String sourceUrl, String url) {
-        this.api = api;
+    private Image(ImageProvider provider, String id, String type, String baseType, FileType fileType, String mimeType, String account, boolean hidden, boolean nsfw, List<Tag> tags, String sourceUrl, String url) {
+        this.provider = provider;
         this.id = id;
         this.type = type;
         this.baseType = baseType;
@@ -182,19 +181,19 @@ public final class Image {
      * @return A request for this image's bytes.
      */
     public <T> PendingRequest<T> download(InputStreamFunction<T> function) {
-        return api.download(url, function);
+        return provider.download(this, function);
     }
 
     @Nonnull
     @CheckReturnValue
-    public static Image fromJSON(@Nonnull Weeb4J api, @Nonnull JSONObject object) {
+    public static Image fromJSON(@Nonnull ImageProvider provider, @Nonnull JSONObject object) {
         JSONArray tagsRaw = object.getJSONArray("tags");
         List<Tag> tags = new ArrayList<>(tagsRaw.length());
         for(int i = 0, j = tagsRaw.length(); i < j; i++) {
             tags.add(Tag.fromJSON(tagsRaw.getJSONObject(i)));
         }
         return new Image(
-                api,
+                provider,
                 object.getString("id"),
                 object.getString("type"),
                 object.getString("baseType"),

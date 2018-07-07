@@ -2,6 +2,7 @@ package com.github.natanbc.weeb4j.image;
 
 import com.github.natanbc.reliqua.request.PendingRequest;
 import com.github.natanbc.weeb4j.Weeb4J;
+import com.github.natanbc.weeb4j.util.InputStreamFunction;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -18,6 +19,25 @@ public interface ImageProvider {
     @CheckReturnValue
     @Nonnull
     Weeb4J getApi();
+
+    /**
+     * Returns the currently used image cache for this provider.
+     * If no implementation was specified, a {@link ImageCache#noop() noop}
+     * instance is returned.
+     *
+     * @return The currently used image cache.
+     */
+    @CheckReturnValue
+    @Nonnull
+    ImageCache getImageCache();
+
+    /**
+     * Sets the image cache for this provider. If null, a {@link ImageCache#noop() noop}
+     * instance is used.
+     *
+     * @param cache Cache to use.
+     */
+    void setImageCache(@Nullable ImageCache cache);
 
     /**
      * Retrieve tags matching the given filters.
@@ -359,4 +379,17 @@ public interface ImageProvider {
     @CheckReturnValue
     @Nonnull
     PendingRequest<Image> getImageById(@Nonnull String id);
+
+    /**
+     * Downloads a given image.
+     *
+     * @param image Image to download.
+     * @param mapper Maps the download input stream
+     * @param <T> Type returned by the mapper
+     *
+     * @return The downloaded data.
+     */
+    @CheckReturnValue
+    @Nonnull
+    <T> PendingRequest<T> download(Image image, InputStreamFunction<T> mapper);
 }

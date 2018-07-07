@@ -12,6 +12,7 @@ import com.github.natanbc.weeb4j.Weeb4J;
 import com.github.natanbc.weeb4j.image.FileType;
 import com.github.natanbc.weeb4j.image.HiddenMode;
 import com.github.natanbc.weeb4j.image.Image;
+import com.github.natanbc.weeb4j.image.ImageCache;
 import com.github.natanbc.weeb4j.image.ImageProvider;
 import com.github.natanbc.weeb4j.image.ImageTypes;
 import com.github.natanbc.weeb4j.image.NsfwFilter;
@@ -44,6 +45,8 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.Color;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +69,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
     private final ReputationManagerImpl reputationManager;
     private final SettingManager settingManager;
 
-    public Weeb4JImpl(OkHttpClient client, RateLimiterFactory factory, boolean trackCallSites, Environment environment, TokenType type, String token, String userAgent, Long botId, SettingCache settingCache) {
+    public Weeb4JImpl(OkHttpClient client, RateLimiterFactory factory, boolean trackCallSites, Environment environment, TokenType type, String token, String userAgent, Long botId, SettingCache settingCache, ImageCache imageCache) {
         super(client, factory, trackCallSites);
         this.environment = environment;
         this.apiBase = environment.getApiBase();
@@ -77,6 +80,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
         this.imageGenerator = new ImageGeneratorImpl(this);
         this.reputationManager = new ReputationManagerImpl(this, botId);
         this.settingManager = new SettingManagerImpl(this, settingCache);
+        this.imageProvider.setImageCache(imageCache);
     }
 
     @Override
@@ -188,8 +192,21 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
     }
 
     public static class ImageProviderImpl extends AbstractManager implements ImageProvider {
+        private volatile ImageCache cache = ImageCache.noop();
+
         public ImageProviderImpl(Weeb4JImpl api) {
             super(api);
+        }
+
+        @Nonnull
+        @Override
+        public ImageCache getImageCache() {
+            return cache;
+        }
+
+        @Override
+        public void setImageCache(@Nullable ImageCache cache) {
+            this.cache = cache == null ? ImageCache.noop() : cache;
         }
 
         @CheckReturnValue
@@ -270,7 +287,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
             return createRequest(api.newRequestBuilder(qsb.build()))
                     .setRateLimiter(getRateLimiter("/images/random"))
                     .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
-                    .build(response->Image.fromJSON(api, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
+                    .build(response->Image.fromJSON(this, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
         }
 
         @CheckReturnValue
@@ -280,7 +297,52 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
             return createRequest(api.newRequestBuilder(api.getApiBase() + "/images/info/" + id))
                     .setRateLimiter(getRateLimiter("/images/info"))
                     .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
-                    .build(response->Image.fromJSON(api, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
+                    .build(response->Image.fromJSON(this, RequestUtils.toJSONObject(response)), RequestUtils::handleError);
+        }
+
+        @Nonnull
+        @Override
+        public <T> PendingRequest<T> download(Image image, InputStreamFunction<T> mapper) {
+            return new PendingRequest<T>(api, null, new Request.Builder().url(image.getUrl()).build(), null) {
+                @Nullable
+                @Override
+                protected T onSuccess(@Nonnull Response response) {
+                    return null;
+                }
+
+                @Override
+                public void async(@Nullable Consumer<T> onSuccess, @Nullable Consumer<RequestException> onError) {
+                    if(onSuccess == null) return;
+                    api.getClient().dispatcher().executorService().submit(()->{
+                        try {
+                            String id = image.getId();
+                            InputStream in = cache.retrieve(id);
+                            if(in != null) {
+                                try(InputStream i = in) {
+                                    onSuccess.accept(mapper.accept(i));
+                                }
+                                return;
+                            }
+                            api.download(image.getUrl(), is->{
+                                cache.save(id, is);
+                                return cache.retrieve(id);
+                            }).async(is->{
+                                try(InputStream i = is) {
+                                    onSuccess.accept(mapper.accept(i));
+                                } catch(IOException e) {
+                                    if(onError != null) {
+                                        onError.accept(new RequestException(e));
+                                    }
+                                }
+                            }, onError);
+                        } catch(IOException e) {
+                            if(onError != null) {
+                                onError.accept(new RequestException(e));
+                            }
+                        }
+                    });
+                }
+            };
         }
     }
 

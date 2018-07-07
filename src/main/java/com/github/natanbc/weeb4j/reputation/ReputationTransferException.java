@@ -5,13 +5,13 @@ import com.github.natanbc.reliqua.request.RequestException;
 @SuppressWarnings("unused")
 public class ReputationTransferException extends RequestException {
     private final int code;
-    private final Error rror;
+    private final Error error;
     private final User user;
 
     public ReputationTransferException(String message, int code, User user) {
         super(message);
         this.code = code;
-        this.rror = code >= 1 && code <= 3 ? Error.values()[code - 1] : Error.UNKNOWN;
+        this.error = code >= 1 && code <= 3 ? Error.values()[code - 1] : Error.UNKNOWN;
         this.user = user;
     }
 
@@ -20,7 +20,7 @@ public class ReputationTransferException extends RequestException {
     }
 
     public Error getError() {
-        return rror;
+        return error;
     }
 
     public User getUser() {

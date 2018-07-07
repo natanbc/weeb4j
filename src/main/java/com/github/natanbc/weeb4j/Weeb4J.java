@@ -6,6 +6,7 @@ import com.github.natanbc.reliqua.request.PendingRequest;
 import com.github.natanbc.weeb4j.image.FileType;
 import com.github.natanbc.weeb4j.image.HiddenMode;
 import com.github.natanbc.weeb4j.image.Image;
+import com.github.natanbc.weeb4j.image.ImageCache;
 import com.github.natanbc.weeb4j.image.ImageProvider;
 import com.github.natanbc.weeb4j.image.ImageTypes;
 import com.github.natanbc.weeb4j.image.NsfwFilter;
@@ -141,6 +142,7 @@ public interface Weeb4J {
         private Environment environment;
         private Long botId;
         private SettingCache settingCache;
+        private ImageCache imageCache;
 
         @CheckReturnValue
         @Nonnull
@@ -228,6 +230,13 @@ public interface Weeb4J {
 
         @CheckReturnValue
         @Nonnull
+        public Builder setImageCache(@Nullable ImageCache imageCache) {
+            this.imageCache = imageCache;
+            return this;
+        }
+
+        @CheckReturnValue
+        @Nonnull
         public Weeb4J build() {
             if(token == null) throw new IllegalStateException("Token not set");
             if(botName == null || botVersion == null) {
@@ -254,7 +263,8 @@ public interface Weeb4J {
                             WeebInfo.COMMIT
                     ),
                     botId,
-                    settingCache
+                    settingCache,
+                    imageCache
             );
         }
     }
