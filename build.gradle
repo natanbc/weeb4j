@@ -7,7 +7,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
-def versionObj = new Version(major: 3, minor: 4, revision: 0)
+def versionObj = new Version(major: 3, minor: 5, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
@@ -16,13 +16,13 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-    mavenCentral()
     jcenter()
+    mavenCentral()
 }
 
 dependencies {
     //HTTP
-    compile 'com.github.natanbc:reliqua:2.3.2'
+    compile 'com.github.natanbc:reliqua:2.4'
 
     //JSON parser
     compile 'org.json:json:20170516'

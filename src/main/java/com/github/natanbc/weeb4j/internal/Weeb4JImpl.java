@@ -52,6 +52,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
@@ -669,10 +670,15 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
             }
             return createRequest(r)
                     .setRateLimiter(getRateLimiter("/settings"))
-                    .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
+                    .setStatusCodeValidator(StatusCodeValidator.acceptAny(200, 404))
                     .build(response->{
-                        JSONObject json = RequestUtils.toJSONObject(response);
-                        Setting s = Setting.fromJSON(json.getJSONObject("setting"));
+                        Setting s;
+                        if(response.code() == 404) {
+                            s = Setting.create(type, id, new JSONObject());
+                        } else {
+                            JSONObject json = RequestUtils.toJSONObject(response);
+                            s = Setting.fromJSON(json.getJSONObject("setting"));
+                        }
                         if(cache != null) {
                             cache.saveSetting(type, id, s.getData());
                         }
@@ -734,14 +740,19 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
             }
             return createRequest(r)
                     .setRateLimiter(getRateLimiter("/settings"))
-                    .setStatusCodeValidator(StatusCodeValidator.ACCEPT_200)
+                    .setStatusCodeValidator(StatusCodeValidator.acceptAny(200, 404))
                     .build(response->{
-                        JSONObject json = RequestUtils.toJSONObject(response);
-                        Setting setting =  Setting.fromJSON(json.getJSONObject("subsetting"));
-                        if(cache != null) {
-                            cache.saveSubSetting(parentType, parentId, type, id, setting.getData());
+                        Setting s;
+                        if(response.code() == 404) {
+                            s = Setting.create(parentType, parentId, type, id, new JSONObject());
+                        } else {
+                            JSONObject json = RequestUtils.toJSONObject(response);
+                            s = Setting.fromJSON(json.getJSONObject("subsetting"));
                         }
-                        return setting;
+                        if(cache != null) {
+                            cache.saveSubSetting(parentType, parentId, type, id, s.getData());
+                        }
+                        return s;
                     }, RequestUtils::handleError);
         }
 
@@ -824,7 +835,7 @@ public class Weeb4JImpl extends Reliqua implements Weeb4J {
 
                 @Nonnull
                 @Override
-                public Future<T> submit() {
+                public CompletionStage<T> submit() {
                     return CompletableFuture.completedFuture(data);
                 }
 
