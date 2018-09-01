@@ -3,10 +3,8 @@ apply plugin: 'com.jfrog.bintray'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
 
-def versionObj = new Version(major: 1, minor: 0, revision: 0)
-
 group 'com.github.natanbc'
-version "${versionObj}"
+version "${rootProject.version}"
 
 sourceCompatibility = 1.8
 
@@ -19,88 +17,4 @@ dependencies {
     compileOnly rootProject
 
     compile 'com.github.ben-manes.caffeine:caffeine:2.6.2'
-}
-
-import org.apache.tools.ant.filters.ReplaceTokens
-
-task sourcesForRelease(type: Copy) {
-    from 'src/main/java'
-    into 'build/filteredSrc'
-    filter(ReplaceTokens, tokens: [
-            VERSION_MAJOR: versionObj.getMajor(),
-            VERSION_MINOR: versionObj.getMinor(),
-            VERSION_REVISION: versionObj.getRevision(),
-            COMMIT_HASH: getCommitHash()
-    ])
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from "${buildDir}/filteredSrc"
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-bintray {
-    project.version = "${versionObj}"
-    user = bintrayUsername
-    key = bintrayApiKey
-    publications = ["BintrayRelease"]
-    pkg {
-        repo = 'maven'
-        name = project.name
-        licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/natanbc/weeb4j.git'
-        publish = true
-        version {
-            name = project.version
-            released = new Date()
-        }
-    }
-}
-
-publishing {
-    publications {
-        BintrayRelease(MavenPublication) {
-            from components.java
-            groupId group
-            artifactId archivesBaseName
-            version version
-            artifact javadocJar
-            artifact sourcesJar
-        }
-    }
-}
-
-String getProjectProperty(String propertyName) {
-    String property = ""
-    if(hasProperty(propertyName)) {
-        property = project.properties[propertyName]
-    }
-    return property
-}
-
-bintrayUpload {
-    dependsOn build
-
-    onlyIf { !getProjectProperty("bintrayUsername").empty }
-    onlyIf { !getProjectProperty("bintrayApiKey").empty }
-}
-
-static def getCommitHash() {
-    def p = Runtime.getRuntime().exec("git rev-parse HEAD")
-    p.waitFor()
-    p.getIn().text.trim()
-}
-
-class Version {
-    String major, minor, revision
-
-
-    String toString() {
-        "${major}.${minor}" + (revision == "0" ? "" : ".${revision}")
-    }
 }
